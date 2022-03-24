@@ -8,23 +8,35 @@ trait CommonConfiguration extends ScalaModule with PublishModule {
   def scalacOptions = Seq("-explain", "-explain-types", "-no-indent", "-deprecation", "-Xfatal-warnings")
 }
 
-object Endpoints extends CommonConfiguration {
-  def publishVersion = "0.0.1"
-  def artifactName = "endpoints"
+object Endpoints extends Module {
 
-  def pomSettings = PomSettings(
-    description = artifactName(),
-    organization = "de.neunzehnhundert97",
-    url = "",
-    licenses = Seq(),
-    versionControl = VersionControl.github("", ""),
-    developers = Seq()
-  )
+  trait Inner extends CommonConfiguration {
+    def millSourcePath = os.pwd / "Endpoints"
+
+    def publishVersion = "0.0.1"
+
+    def artifactName = "endpoints"
+
+    def pomSettings = PomSettings(
+      description = artifactName(),
+      organization = "de.neunzehnhundert97",
+      url = "",
+      licenses = Seq(),
+      versionControl = VersionControl.github("", ""),
+      developers = Seq()
+    )
+  }
+
+  object JS extends Inner with ScalaJSModule {
+    def scalaJSVersion = "1.7.1"
+  }
+
+  object JVM extends Inner {}
 }
 
 object EndpointsZHTTP extends CommonConfiguration {
   def publishVersion = "0.0.1"
-  def artifactName ="endpoints-zhttp"
+  def artifactName   = "endpoints-zhttp"
 
   def pomSettings = PomSettings(
     description = artifactName(),
@@ -41,15 +53,15 @@ object EndpointsZHTTP extends CommonConfiguration {
   )
 
   def moduleDeps = Seq(
-    Endpoints
+    Endpoints.JVM
   )
 }
 
 object EndpointsJS extends CommonConfiguration with ScalaJSModule {
-  def scalaJSVersion = "1.5.0"
+  def scalaJSVersion = "1.7.1"
 
   def publishVersion = "0.0.1"
-  def artifactName ="endpoints-js"
+  def artifactName   = "endpoints-js"
 
   def pomSettings = PomSettings(
     description = artifactName(),
@@ -69,6 +81,6 @@ object EndpointsJS extends CommonConfiguration with ScalaJSModule {
   )
 
   def moduleDeps = Seq(
-    Endpoints
+    Endpoints.JS
   )
 }

@@ -3,9 +3,13 @@ import mill.scalalib.publish._
 import coursier.maven.MavenRepository
 
 trait CommonConfiguration extends ScalaModule with PublishModule {
-  def scalaVersion = "3.0.0"
+  def scalaVersion = "3.1.0"
 
-  def scalacOptions = Seq("-explain", "-explain-types", "-no-indent", "-deprecation", "-Xfatal-warnings")
+  def scalacOptions = Seq(
+    "-no-indent",
+    "-deprecation",
+    "-Xfatal-warnings"
+  )
 }
 
 object Endpoints extends Module {
@@ -48,7 +52,7 @@ object EndpointsZHTTP extends CommonConfiguration {
   )
 
   def ivyDeps = Agg(
-    ivy"io.d11::zhttp:1.0.0.0-RC17",
+    ivy"io.d11::zhttp:1.0.0.0-RC25",
     ivy"com.lihaoyi::upickle::1.4.0"
   )
 

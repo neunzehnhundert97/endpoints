@@ -23,14 +23,15 @@ object ServerAdapter {
     inline func: A => ZIO[R, E, B1]
   )(using
     @implicitNotFound("The return ${B1} does not conform to ${B}") inline ev: B1 <:< B
-  ): Http[Console & Has[ParseLocker] & R, E, Any, Response[Any, Nothing]] = {
+  ): Http[Has[ParseLocker] & Console & R, Any, Request, Response] = {
+    // ) = {
     // Get method and path
     // This must be done before the matching as matching does not allow for expressions
     val M = Method.fromString(e.method.toString)
     val P = Path(e.path)
 
     // Match the request
-    Http.collectM {
+    Http.collectZIO[Request] {
       case req @ M -> P =>
         // Check the input type of the endpoint
         val data = inline erasedValue[A] match {
@@ -39,22 +40,24 @@ object ServerAdapter {
             val ev = summonInline[Unit =:= A]
             ZIO.succeed(ev(()))
           // For anything else, read the request body and parse it as JSON
-          case _ =>
-            parseSafely[A](req.bodyAsUTF8.getOrElse(""))
+          case _ => for {
+              body   <- req.bodyAsString
+              parsed <- parseSafely[A](body)
+            } yield parsed
         }
 
         for {
           d   <- data
           _   <- putStrLn(s"$M: $P").ignore
           res <- func(d)
-        } yield Response.jsonString(write(ev(res)))
+        } yield Response.json(write(ev(res)))
     }
   }
 
   /** Due to unknown reasons, the JSON-parsing is not fibre safe, so it is protected with a mutex. */
   def parseSafely[A: Reader](str: String) = for {
     sem <- ParseLocker.parsing
-    res <- sem.withPermit(ZIO.succeed(read[A](str)))
+    res <- sem.withPermit(ZIO.effect(read[A](str)).mapError(t => ParsingException(t.getMessage)))
   } yield res
 
   /** Generates an route for the given endpoint, which performs the given effect. */
@@ -63,13 +66,6 @@ object ServerAdapter {
     inline func: ZIO[R, E, B1]
   )(using
     @implicitNotFound("The return ${B1} does not conform to ${B}") inline ev: B1 <:< B
-  ): Http[Console & Has[ParseLocker] & R, E, Any, Response[Any, Nothing]] =
+  ): Http[Has[ParseLocker] & Console & R, Any, Request, Response] =
     generateEndpoint(e, _ => func)
-}
-
-extension (r: Request) {
-  def bodyAsUTF8: Option[String] = r.content match {
-    case HttpData.CompleteData(data) => Option(String(data.toArray, "utf-8"))
-    case _                           => Option.empty
-  }
 }

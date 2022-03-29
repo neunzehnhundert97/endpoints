@@ -18,7 +18,7 @@ import org.scalajs.dom.ext.Ajax
 
 import de.neunzehnhundert97.endpoints.{Endpoint, Method}
 
-trait ClientEndpoint[F[_], A, B] {
+trait ClientEndpoint[F[_], A, B]:
 
   /** Calls the endpoint and gives the result in an event stream. */
   def call(input: A): F[B]
@@ -30,9 +30,8 @@ trait ClientEndpoint[F[_], A, B] {
   /** Calls the endpoint and gives the result in an event stream. */
   def apply(input: A)(handler: PartialFunction[Try[B], Unit])(implicit ev: F[B] =:= Future[B]): Unit =
     ev(call(input)).onComplete(handler)
-}
 
-trait ClientEndpointWithoutParamter[F[_], A, B] extends ClientEndpoint[F, A, B] {
+trait ClientEndpointWithoutParamter[F[_], A, B] extends ClientEndpoint[F, A, B]:
 
   def ev: Unit =:= A
 
@@ -41,75 +40,65 @@ trait ClientEndpointWithoutParamter[F[_], A, B] extends ClientEndpoint[F, A, B] 
 
   def apply(): F[B] =
     apply(ev(()))
-}
 
-object ClientAdapter {
+extension [A: Writer, B: Reader](endpoint: Endpoint[A, B])
 
   /** Builds a callable endpoint from the abstract describtion. */
-  transparent inline def createLaminextEndpoint[A: Writer, B: Reader](end: Endpoint[A, B]) = {
-    val method = end.method.toString.asInstanceOf[HttpMethod]
+  transparent inline def createLaminextEndpoint =
+    val method = endpoint.method.toString.asInstanceOf[HttpMethod]
 
-    inline erasedValue[A] match {
+    inline erasedValue[A] match
       case _: Unit =>
-        new ClientEndpointWithoutParamter[EventStream, A, B] {
-          override def call(input: A): EventStream[B] = {
-            val resp = Fetch(method, s"./${end.path}").text
-            inline erasedValue[B] match {
+        new ClientEndpointWithoutParamter[EventStream, A, B]:
+          override def call(input: A): EventStream[B] =
+            val resp = Fetch(method, s"./${endpoint.path}").text
+            inline erasedValue[B] match
               case _: Unit =>
                 val ev = summonInline[Unit =:= B]
                 resp.mapToStrict(ev(()))
               case _ => resp.map(r => read[B](r.data, true))
-            }
-          }
 
           override def ev = summonInline[Unit =:= A]
-        }
+        end new
 
-      case _ => new ClientEndpoint[EventStream, A, B] {
-          override def call(input: A): EventStream[B] = {
-            val resp = Fetch(method, s"./${end.path}", body = input).text
-            inline erasedValue[B] match {
+      case _ =>
+        new ClientEndpoint[EventStream, A, B]:
+          override def call(input: A): EventStream[B] =
+            val resp = Fetch(method, s"./${endpoint.path}", body = input).text
+            inline erasedValue[B] match
               case _: Unit =>
                 val ev = summonInline[Unit =:= B]
                 resp.mapToStrict(ev(()))
               case _ => resp.map(r => read[B](r.data))
-            }
-          }
-        }
-    }
-  }
+
+        end new
 
   /** Builds a callable endpoint from the abstract describtion. */
-  transparent inline def createFetchEndpoint[A: Writer, B: Reader](end: Endpoint[A, B]) = {
-    val method = end.method.toString.asInstanceOf[HttpMethod]
+  transparent inline def createFetchEndpoint =
+    val method = endpoint.method.toString.asInstanceOf[HttpMethod]
 
-    inline erasedValue[A] match {
+    inline erasedValue[A] match
       case _: Unit =>
-        new ClientEndpointWithoutParamter[Future, A, B] {
-          override def call(input: A): Future[B] = {
-            val resp = Ajax(end.method.toString, s"./${end.path}", null, 0, Map.empty, false, "")
-            inline erasedValue[B] match {
+        new ClientEndpointWithoutParamter[Future, A, B]:
+          override def call(input: A): Future[B] =
+            val resp = Ajax(endpoint.method.toString, s"./${endpoint.path}", null, 0, Map.empty, false, "")
+            inline erasedValue[B] match
               case _: Unit =>
                 val ev = summonInline[Unit =:= B]
                 resp.map(_ => ev(()))
               case _ => resp.map(r => read[B](r.responseText))
-            }
-          }
 
           override def ev = summonInline[Unit =:= A]
-        }
+        end new
 
-      case _ => new ClientEndpoint[Future, A, B] {
-          override def call(input: A): Future[B] = {
-            val resp = Ajax(end.method.toString, s"./${end.path}", write(input), 0, Map.empty, false, "")
-            inline erasedValue[B] match {
+      case _ =>
+        new ClientEndpoint[Future, A, B]:
+          override def call(input: A): Future[B] =
+            val resp = Ajax(endpoint.method.toString, s"./${endpoint.path}", write(input), 0, Map.empty, false, "")
+            inline erasedValue[B] match
               case _: Unit =>
                 val ev = summonInline[Unit =:= B]
                 resp.map(_ => ev(()))
               case _ => resp.map(r => read[B](r.responseText))
-            }
-          }
-        }
-    }
-  }
-}
+
+        end new

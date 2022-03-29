@@ -6,7 +6,6 @@ trait CommonConfiguration extends ScalaModule with PublishModule {
   def scalaVersion = "3.1.0"
 
   def scalacOptions = Seq(
-    "-no-indent",
     "-deprecation",
     "-Xfatal-warnings"
   )
@@ -17,7 +16,7 @@ object Endpoints extends Module {
   trait Inner extends CommonConfiguration {
     def millSourcePath = os.pwd / "Endpoints"
 
-    def publishVersion = "0.0.1"
+    def publishVersion = "0.0.2"
 
     def artifactName = "endpoints"
 
@@ -39,7 +38,7 @@ object Endpoints extends Module {
 }
 
 object EndpointsZHTTP extends CommonConfiguration {
-  def publishVersion = "0.0.1"
+  def publishVersion = "0.0.2"
   def artifactName   = "endpoints-zhttp"
 
   def pomSettings = PomSettings(
@@ -64,7 +63,7 @@ object EndpointsZHTTP extends CommonConfiguration {
 object EndpointsJS extends CommonConfiguration with ScalaJSModule {
   def scalaJSVersion = "1.7.1"
 
-  def publishVersion = "0.0.1"
+  def publishVersion = "0.0.2"
   def artifactName   = "endpoints-js"
 
   def pomSettings = PomSettings(

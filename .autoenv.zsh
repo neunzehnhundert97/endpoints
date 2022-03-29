@@ -10,3 +10,13 @@ endpoints()
     echo "No build.sc found";
   fi
 }
+
+publishAll()
+{
+  if [ -f "build.sc" ]; then
+    mill clean
+    mill "{Endpoints.JVM,Endpoints.JS,EndpointsJS,EndpointsZHTTP}.publishLocal"
+  else
+    echo "No build.sc found";
+  fi
+}

@@ -6,4 +6,4 @@ trait Endpoint[+A, -B]:
   def method: Method
 
 enum Method:
-  case GET, POST, DELETE, PUT
+  case GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS

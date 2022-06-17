@@ -2,13 +2,18 @@ import mill._, scalalib._, scalajslib._
 import mill.scalalib.publish._
 import coursier.maven.MavenRepository
 
-trait CommonConfiguration extends ScalaModule with PublishModule {
+import $ivy.`com.goyeau::mill-scalafix::0.2.8`
+import com.goyeau.mill.scalafix.ScalafixModule
+
+trait CommonConfiguration extends ScalaModule with PublishModule with ScalafixModule {
   def scalaVersion = "3.1.0"
 
   def scalacOptions = Seq(
     "-deprecation",
     "-Xfatal-warnings"
   )
+
+  def scalafixIvyDeps = Agg(ivy"com.github.liancheng::organize-imports:0.6.0")
 }
 
 object Endpoints extends Module {
@@ -34,7 +39,7 @@ object Endpoints extends Module {
     def scalaJSVersion = "1.7.1"
   }
 
-  object JVM extends Inner {}
+  object JVM extends Inner
 }
 
 object EndpointsZHTTP extends CommonConfiguration {
@@ -58,6 +63,14 @@ object EndpointsZHTTP extends CommonConfiguration {
   def moduleDeps = Seq(
     Endpoints.JVM
   )
+
+  object test extends Tests {
+    def ivyDeps = Agg(
+      ivy"dev.zio::zio-test:1.0.10",
+      ivy"dev.zio::zio-test-sbt:1.0.10"
+    )
+    def testFramework = "zio.test.sbt.ZTestFramework"
+  }
 }
 
 object EndpointsJS extends CommonConfiguration with ScalaJSModule {

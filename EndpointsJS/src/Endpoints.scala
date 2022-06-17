@@ -41,7 +41,7 @@ trait ClientEndpointWithoutParamter[F[_], A, B] extends ClientEndpoint[F, A, B]:
   def apply(): F[B] =
     apply(ev(()))
 
-extension [A: Writer, B: Reader](endpoint: Endpoint[A, B])
+final case class EndpointCreator[A: Writer, B: Reader](endpoint: Endpoint[A, B]) {
 
   /** Builds a callable endpoint from the abstract describtion. */
   transparent inline def createLaminextEndpoint =
@@ -102,3 +102,4 @@ extension [A: Writer, B: Reader](endpoint: Endpoint[A, B])
               case _ => resp.map(r => read[B](r.responseText))
 
         end new
+}

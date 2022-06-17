@@ -4,10 +4,8 @@ import zio.{Has, ZIO}
 import zio.console.{Console, putStrLn}
 import zio.console.Console.Service
 
-import scala.compiletime.{erasedValue, summonInline}
+import scala.compiletime.{erasedValue, summonInline, summonFrom, error, codeOf}
 import scala.annotation.implicitNotFound
-
-import java.nio.charset.Charset
 
 import zhttp.http.*
 
@@ -15,16 +13,24 @@ import upickle.default.{write, Writer, Reader, read}
 
 import de.neunzehnhundert97.endpoints.{Endpoint => SEP}
 
-extension [A: Reader, B: Writer](endpoint: SEP[A, B])
+final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
 
-  /** Generates an route for the given endpoint, which calls the given function. */
-  inline def generateEndpoint[B1, R, E](inline func: A => ZIO[R, E, B1])(using
-    @implicitNotFound("The return ${B1} does not conform to ${B}") inline ev: B1 <:< B
-  ): Http[Has[ParseLocker] & Console & R, Any, Request, Response] =
+  /** Generates an route for the given endpoint. */
+  inline def create[R, E](
+    inline func: (A => ZIO[R, E, B]) | ZIO[R, E, B] |(A => B) | B
+  ): Http[Has[ParseLocker] & Console & R, Any, Request, Response] = {
     // Get method and path
     // This must be done before the matching as matching does not allow for expressions
     val M = Method.fromString(endpoint.method.toString)
     val P = Path(endpoint.path)
+
+    // Convert the given function into the right form
+    val function: A => ZIO[R, E, B] = inline func.match {
+      case a: B                         => (_: A) => ZIO.succeed(a)
+      case a: ZIO[R, E, B]              => (_: A) => a
+      case a: Function[A, ZIO[R, E, B]] => a
+      case a: Function[A, B]            => a.andThen(ZIO.succeed)
+    }
 
     // Match the request
     Http.collectZIO[Request] {
@@ -46,21 +52,16 @@ extension [A: Reader, B: Writer](endpoint: SEP[A, B])
         for
           d   <- data
           _   <- putStrLn(s"$M: $P").ignore
-          res <- func(d)
-        yield Response.json(write(ev(res)))
+          res <- function(d)
+        yield Response.json(write(res))
     }
+  }
 
-  /** Due to unknown reasons, the JSON-parsing is not fibre safe, so it is protected with a mutex. */
+  /** Perform parsing of the JSON string fibre safe. */
   def parseSafely(str: String) =
     for
       sem <- ParseLocker.parsing
       res <- sem.withPermit(ZIO.effect(read[A](str)).mapError(t => ParsingException(t.getMessage)))
     yield res
 
-  /** Generates an route for the given endpoint, which performs the given effect. */
-  inline def generateEndpoint[B1, R, E](
-    inline func: ZIO[R, E, B1]
-  )(using
-    @implicitNotFound("The return ${B1} does not conform to ${B}") inline ev: B1 <:< B
-  ): Http[Has[ParseLocker] & Console & R, Any, Request, Response] =
-    generateEndpoint(_ => func)
+}

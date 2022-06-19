@@ -10,10 +10,22 @@ trait CommonConfiguration extends ScalaModule with PublishModule with ScalafixMo
 
   def scalacOptions = Seq(
     "-deprecation",
-    "-Xfatal-warnings"
+    "-Xfatal-warnings",
+    "-Xsemanticdb"
   )
 
-  def scalafixIvyDeps = Agg(ivy"com.github.liancheng::organize-imports:0.6.0")
+  def scalafixIvyDeps = Agg(
+    ivy"com.github.liancheng::organize-imports:0.6.0",
+    ivy"org.scalalint::rules:0.1.4"
+  )
+
+  object test extends Tests {
+    def ivyDeps = Agg(
+      ivy"dev.zio::zio-test:1.0.10",
+      ivy"dev.zio::zio-test-sbt:1.0.10"
+    )
+    def testFramework = "zio.test.sbt.ZTestFramework"
+  }
 }
 
 object Endpoints extends Module {
@@ -42,7 +54,7 @@ object Endpoints extends Module {
   object JVM extends Inner
 }
 
-object EndpointsZHTTP extends CommonConfiguration {
+object EndpointsZHTTP extends CommonConfiguration with ScalafixModule {
   def publishVersion = "0.0.2"
   def artifactName   = "endpoints-zhttp"
 
@@ -63,14 +75,6 @@ object EndpointsZHTTP extends CommonConfiguration {
   def moduleDeps = Seq(
     Endpoints.JVM
   )
-
-  object test extends Tests {
-    def ivyDeps = Agg(
-      ivy"dev.zio::zio-test:1.0.10",
-      ivy"dev.zio::zio-test-sbt:1.0.10"
-    )
-    def testFramework = "zio.test.sbt.ZTestFramework"
-  }
 }
 
 object EndpointsJS extends CommonConfiguration with ScalaJSModule {

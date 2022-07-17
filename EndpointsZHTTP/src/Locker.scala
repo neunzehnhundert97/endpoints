@@ -1,6 +1,6 @@
 package de.neunzehnhundert97.endpoints.zhttp
 
-import zio.{Semaphore, ZLayer, ZIO, Has}
+import zio.{Semaphore, ZIO, ZLayer}
 
 trait ParseLocker {
   def parsing: Semaphore
@@ -20,5 +20,5 @@ object ParseLocker {
     }
 
   def live =
-    ZLayer.fromEffect(ParseLocker.apply)
+    ZLayer.fromZIO(ParseLocker.apply)
 }

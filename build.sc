@@ -33,7 +33,7 @@ object Endpoints extends Module {
   trait Inner extends CommonConfiguration {
     def millSourcePath = os.pwd / "Endpoints"
 
-    def publishVersion = "0.0.2"
+    def publishVersion = "0.0.3"
 
     def artifactName = "endpoints"
 
@@ -55,7 +55,7 @@ object Endpoints extends Module {
 }
 
 object EndpointsZHTTP extends CommonConfiguration with ScalafixModule {
-  def publishVersion = "0.0.2"
+  def publishVersion = "0.0.3"
   def artifactName   = "endpoints-zhttp"
 
   def pomSettings = PomSettings(
@@ -68,7 +68,7 @@ object EndpointsZHTTP extends CommonConfiguration with ScalafixModule {
   )
 
   def ivyDeps = Agg(
-    ivy"io.d11::zhttp:1.0.0.0-RC25",
+    ivy"io.d11::zhttp:2.0.0-RC7",
     ivy"com.lihaoyi::upickle::1.4.0"
   )
 
@@ -80,7 +80,7 @@ object EndpointsZHTTP extends CommonConfiguration with ScalafixModule {
 object EndpointsJS extends CommonConfiguration with ScalaJSModule {
   def scalaJSVersion = "1.7.1"
 
-  def publishVersion = "0.0.2"
+  def publishVersion = "0.0.3"
   def artifactName   = "endpoints-js"
 
   def pomSettings = PomSettings(

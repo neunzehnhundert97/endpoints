@@ -1,15 +1,12 @@
 package de.neunzehnhundert97.endpoints.zhttp
 
-import zio.{Has, ZIO}
-import zio.console.{Console, putStrLn}
-import zio.console.Console.Service
-
-import scala.compiletime.{erasedValue, summonInline, summonFrom, error, codeOf}
 import scala.annotation.implicitNotFound
+import scala.compiletime.{codeOf, erasedValue, error, summonFrom, summonInline}
 
+import zio.{Console, ZIO}
+
+import upickle.default.{Reader, Writer, read, write}
 import zhttp.http.*
-
-import upickle.default.{write, Writer, Reader, read}
 
 import de.neunzehnhundert97.endpoints.{Endpoint => SEP}
 
@@ -18,7 +15,7 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
   /** Generates an route for the given endpoint. */
   inline def create[R, E](
     inline func: (A => ZIO[R, E, B]) | ZIO[R, E, B] |(A => B) | B
-  ): Http[Has[ParseLocker] & Console & R, Any, Request, Response] = {
+  ): Http[ParseLocker & R, Any, Request, Response] = {
     // Get method and path
     // This must be done before the matching as matching does not allow for expressions
     val M = Method.fromString(endpoint.method.toString)
@@ -51,7 +48,7 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
 
         for
           d   <- data
-          _   <- putStrLn(s"$M: $P").ignore
+          _   <- Console.printLine(s"$M: $P").ignore
           res <- function(d)
         yield Response.json(write(res))
     }
@@ -61,7 +58,7 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
   def parseSafely(str: String) =
     for
       sem <- ParseLocker.parsing
-      res <- sem.withPermit(ZIO.effect(read[A](str)).mapError(t => ParsingException(t.getMessage)))
+      res <- sem.withPermit(ZIO.attempt(read[A](str)).mapError(t => ParsingException(t.getMessage)))
     yield res
 
 }

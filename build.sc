@@ -21,8 +21,8 @@ trait CommonConfiguration extends ScalaModule with PublishModule with ScalafixMo
 
   object test extends Tests {
     def ivyDeps = Agg(
-      ivy"dev.zio::zio-test:1.0.10",
-      ivy"dev.zio::zio-test-sbt:1.0.10"
+      ivy"dev.zio::zio-test:2.0.0",
+      ivy"dev.zio::zio-test-sbt:2.0.0"
     )
     def testFramework = "zio.test.sbt.ZTestFramework"
   }

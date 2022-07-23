@@ -2,28 +2,26 @@ import de.neunzehnhundert97.endpoints.zhttp.*
 import de.neunzehnhundert97.endpoints.{Method => ME, *}
 
 import zio.ZIO
-import zio.console.putStr
+import zio.Console
 
 import zio.test.*
-import zio.test.Assertion.*
-import zio.test.environment.*
-import java.util.Date
 
-case class Wrapper[A](a: A)
-
-case object E extends Endpoint[Int, Long] {
-  def method = ME.GET
-  def path   = "path"
+object E extends Endpoint[Long, Int] {
+  def method = ME.POST
 }
 
-object ZHTTPEndpointSpec extends DefaultRunnableSpec {
+def aa(l: Long)            = l.toInt
+def aaa(l: Long)           = ZIO.succeed(l.toInt)
+def bb: ZIO[Any, Int, Int] = ZIO.fail(1)
+
+object ZHTTPEndpointSpec extends ZIOSpecDefault {
   def spec = suite("Stuff")(
     test("Bla") {
-      // EndpointCreator(E).create(putStr)
+      EndpointCreator(E).experiment(aa)
+      EndpointCreator(E).experiment(aaa)
+      EndpointCreator(E).experiment(bb)
+      EndpointCreator(E).experiment(1)
       assertTrue(true)
     }
   )
-
-  val a = List(1, 1L)
-
 }

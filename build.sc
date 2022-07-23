@@ -24,6 +24,7 @@ trait CommonConfiguration extends ScalaModule with PublishModule with ScalafixMo
       ivy"dev.zio::zio-test:2.0.0",
       ivy"dev.zio::zio-test-sbt:2.0.0"
     )
+
     def testFramework = "zio.test.sbt.ZTestFramework"
   }
 }

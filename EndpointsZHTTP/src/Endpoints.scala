@@ -30,7 +30,7 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
             // If it is unit, skip reading the body and return a typed unit
             case _: Unit =>
               val ev = summonInline[Unit =:= A]
-              ZIO.succeed(ev(()))
+              ZIO.from(ev(()))
             // For anything else, read the request body and parse it as JSON
             case _ =>
               for
@@ -47,8 +47,8 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
   }
 
   /** Generates a route for the given endpoint. */
-  inline def createFromStatic(b: B) =
-    create(_ => ZIO.succeed(b))
+  inline def createFromStatic(inline b: B) =
+    create(_ => ZIO.from(b))
 
   /** Generates a route for the given endpoint. */
   inline def createFromZIO[R, E](zio: ZIO[R, E, B]) =
@@ -56,7 +56,7 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
 
   /** Generates a route for the given endpoint. */
   def createFromFunction(func: A => B) =
-    create(func.andThen(ZIO.succeed))
+    create(func.andThen(ZIO.from))
 
   /** Perform parsing of the JSON string fibre safe. */
   def parseSafely(str: String) =

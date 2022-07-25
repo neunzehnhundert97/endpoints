@@ -14,20 +14,12 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
 
   /** Generates an route for the given endpoint. */
   inline def create[R, E](
-    inline func: (A => ZIO[R, E, B]) | ZIO[R, E, B] |(A => B) | B
+    inline function: A => ZIO[R, E, B]
   ): Http[ParseLocker & R, Any, Request, Response] = {
     // Get method and path
     // This must be done before the matching as matching does not allow for expressions
     val M = Method.fromString(endpoint.method.toString)
     val P = Path(endpoint.path)
-
-    // Convert the given function into the right form
-    val function: A => ZIO[R, E, B] = inline func.match {
-      case a: B                         => (_: A) => ZIO.succeed(a)
-      case a: ZIO[R, E, B]              => (_: A) => a
-      case a: Function[A, ZIO[R, E, B]] => a
-      case a: Function[A, B]            => a.andThen(ZIO.succeed)
-    }
 
     // Match the request
     Http.collectZIO[Request] {
@@ -38,7 +30,7 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
             // If it is unit, skip reading the body and return a typed unit
             case _: Unit =>
               val ev = summonInline[Unit =:= A]
-              ZIO.succeed(ev(()))
+              ZIO.from(ev(()))
             // For anything else, read the request body and parse it as JSON
             case _ =>
               for
@@ -54,6 +46,18 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
     }
   }
 
+  /** Generates a route for the given endpoint. */
+  inline def createFromStatic(inline b: B) =
+    create(_ => ZIO.from(b))
+
+  /** Generates a route for the given endpoint. */
+  inline def createFromZIO[R, E](zio: ZIO[R, E, B]) =
+    create(_ => zio)
+
+  /** Generates a route for the given endpoint. */
+  def createFromFunction(func: A => B) =
+    create(func.andThen(ZIO.from))
+
   /** Perform parsing of the JSON string fibre safe. */
   def parseSafely(str: String) =
     for
@@ -61,4 +65,35 @@ final case class EndpointCreator[A: Reader, B: Writer](endpoint: SEP[A, B]) {
       res <- sem.withPermit(ZIO.attempt(read[A](str)).mapError(t => ParsingException(t.getMessage)))
     yield res
 
+  /** Generate a route for the given endpoint. This function accepts all possible inputs. */
+  inline def createFrom[Input, R, E](inline input: Input)(using ev: EPConstructor[A, B, R, E, Input]) =
+    create(ev.convert(input))
 }
+
+trait EPConstructor[In, Out, R, E, Convertee] {
+  def convert(input: Convertee): In => ZIO[R, E, Out]
+}
+
+implicit def zioFunctionConstructor[A, B, R, E]: EPConstructor[A, B, R, E, A => ZIO[R, E, B]] =
+  new EPConstructor[A, B, R, E, A => ZIO[R, E, B]] {
+    def convert(input: A => ZIO[R, E, B]): A => ZIO[R, E, B] =
+      input
+  }
+
+implicit def functionConstructor[A, B]: EPConstructor[A, B, Any, Nothing, A => B] =
+  new EPConstructor[A, B, Any, Nothing, A => B] {
+    def convert(input: A => B): A => ZIO[Any, Nothing, B] =
+      input.andThen(ZIO.succeed)
+  }
+
+implicit def zioConstructor[A, B, R, E]: EPConstructor[A, B, R, E, ZIO[R, E, B]] =
+  new EPConstructor[A, B, R, E, ZIO[R, E, B]] {
+    def convert(input: ZIO[R, E, B]): A => ZIO[R, E, B] =
+      _ => input
+  }
+
+implicit def staticConstructor[A, B]: EPConstructor[A, B, Any, Nothing, B] =
+  new EPConstructor[A, B, Any, Nothing, B] {
+    def convert(input: B): A => ZIO[Any, Nothing, B] =
+      _ => ZIO.succeed(input)
+  }
